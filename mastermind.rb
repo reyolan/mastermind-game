@@ -1,22 +1,20 @@
-require 'pry-byebug'
+# frozen_string_literal: true
 
 # add custom method to String class
 class String
   def str_to_num_arr(str = self)
-    str.split(//).map!(&:to_i)
+    str.split(//).map(&:to_i)
   end
 end
 
-# this module contain method that checks the pattern input of codebreaker
+# module contains method that checks the pattern input of codebreaker
 module MasterMindPattern
   def check_pattern_input(pattern_input, code_pattern)
     pattern_input.map.with_index do |num, i|
       if num == code_pattern[i]
-        code_pattern[i] = nil
-        '+'
+        code_pattern[code_pattern.index(pattern_input[i])] = '+'
       elsif code_pattern.any?(num)
-        code_pattern[code_pattern.index(pattern_input[i])] = nil
-        '-'
+        code_pattern[code_pattern.index(pattern_input[i])] = '-'
       else
         'x'
       end
@@ -24,7 +22,7 @@ module MasterMindPattern
   end
 end
 
-# Create a CodeMaker class, which randomly selects the secret color
+# class containing methods for codemaker
 class CodeMaker
   include MasterMindPattern
   attr_accessor :code_pattern
@@ -44,10 +42,9 @@ class CodeMaker
   end
 
   def create_pattern_player
-    puts 'Input the code (four digits and from 1 to 6 only) you want the computer to guess.'
-    until code_pattern.length == 4 && code_pattern.str_to_num_arr.all? { |num| num.positive? && num < 7 }
+    print 'Input the code (four digits and from 1 to 6 only) you want the computer to guess: '
+    until (code_pattern = gets.chomp).length == 4 && code_pattern.str_to_num_arr.all? { |num| num.positive? && num < 7 }
       print 'Please input four numbers only and only from 1 to 6: '
-      self.code_pattern = gets.chomp
     end
     code_pattern.str_to_num_arr
   end
@@ -57,23 +54,26 @@ class CodeMaker
   end
 end
 
-# class of codebreaker
+# class containing methods for codebreaker
 class CodeBreaker
   include MasterMindPattern
-  attr_accessor :guess, :code_combinations, :counter
+  attr_accessor :guess
+  attr_reader :code_combinations
 
   def initialize
     initialize_all_possible_combination
   end
 
   def initialize_all_possible_combination
-    @code_combinations = [*1111..6666]
+    code_combinations = [*1111..6666]
     code_combinations.map!(&:to_s).reject! { |e| e.include?('0') }.delete('1122')
     code_combinations.unshift('1122')
+    code_combinations
   end
 
   def input_guess(condition)
     if condition == 1
+      @code_combinations ||= initialize_all_possible_combination
       input_guess_computer
     else
       input_guess_player
@@ -82,10 +82,8 @@ class CodeBreaker
 
   def input_guess_player
     print 'Input your guess: '
-    self.guess = gets.chomp
-    until guess.length == 4 && guess.split(//).map(&:to_i).all? { |num| num.positive? && num < 7 }
+    until (self.guess = gets.chomp).length == 4 && guess.split(//).map(&:to_i).all? { |num| num.positive? && num < 7 }
       print 'Please input four numbers only and only from 1 to 6: '
-      self.guess = gets.chomp
     end
   end
 
@@ -103,10 +101,10 @@ class CodeBreaker
   end
 end
 
-# this class defines the methods done in the Mastermind game
+# class defining the methods done in the Mastermind game
 class Game
-  attr_accessor :guess_counter, :code_breaker, :code_maker, :pattern, :pattern_input
-  attr_reader :role
+  attr_accessor :guess_counter
+  attr_reader :role, :code_breaker, :code_maker, :pattern, :pattern_input
 
   def initialize
     @guess_counter = 12
@@ -114,6 +112,8 @@ class Game
     @code_maker = CodeMaker.new
     start_game
   end
+
+  private
 
   def decrement_guess_counter
     self.guess_counter -= 1
@@ -127,21 +127,22 @@ class Game
 
   def show_instruction
     puts ''
-    puts 'Both the computer and the player can be a codebreaker or codemaker depending on the chosen setting.'
+    puts 'Both the computer and the player can be a codebreaker or codemaker depending on the chosen configuration.'
     puts 'Codemaker is the one who will create the code to be deciphered by the codebreaker.'
     puts 'Codebreaker is the one who will break the code made by the codemaker with a limit of 12 guesses.'
     puts ''
-    puts '+ indicates that one of the numbers in the pattern is correct and is in right position.'
-    puts '- indicates that one of the numbers in the pattern is correct but is in the wrong position.'
-    puts 'x indicates that none of the numbers in the pattern has the correct color and position.'
+    puts 'In every guess, there shall be a clue given, below are the meaning of each symbol that will serve as a clue.'
+    puts '+ indicates that one of the numbers is correct and is in right position.'
+    puts '- indicates that one of the numbers is correct but is in the wrong position.'
+    puts 'x indicates that none of the numbers has the correct color and position.'
     puts ''
   end
 
   def choose_role
-    puts 'Type the role you want.'
     puts '1: You are the codemaker and computer is the codebreaker.'
     puts '2: You are the codebreaker and computer is the codemaker.'
-    puts 'Invalid Input, choose only between 1 and 2.' until [1, 2].include?(@role = gets.chomp.to_i)
+    print 'Input who will be the codemaker and codebreaker: '
+    print 'Invalid input, choose only between 1 and 2: ' until [1, 2].include?(@role = gets.chomp.to_i)
     puts ''
     create_pattern(role)
   end
@@ -155,21 +156,19 @@ class Game
   end
 
   def ask_duplicate_pattern
-    puts 'Type the pattern you desire.'
     puts '1: Codemaker cannot choose duplicate numbers in the pattern to be guessed.'
     puts '2: Codemaker can choose duplicate numbers in the pattern to be guessed.'
-    until [1, 2].include?(pattern_condition = gets.chomp.to_i)
-      puts 'Invalid Input, choose only between 1 and 2.'
-    end
+    print 'Input the pattern you desire: '
+    print 'Invalid input, choose only between 1 and 2.' until [1, 2].include?(pattern_condition = gets.chomp.to_i)
     puts ''
     @pattern = code_maker.create_pattern_computer(pattern_condition)
   end
 
   def start_guess
-    return show_result('lose') if guess_counter.zero?
+    return show_result if guess_counter.zero?
 
     puts ''
-    puts "You have #{guess_counter} remaining tries to guess the code."
+    puts "The codebreaker has #{guess_counter} remaining tries to guess the code."
     decrement_guess_counter
     code_breaker.input_guess(role)
     check_pattern
@@ -185,12 +184,14 @@ class Game
     start_guess
   end
 
-  def show_result(result)
+  def show_result(result = nil)
     puts ''
     if result == 'win'
-      puts 'Congratulations, you have correctly guessed the code!'
+      puts 'The codebreaker has correctly guessed the code!'
+      puts 'Codebreaker WINS!'
     else
       puts 'Ran out number of guesses. Better luck next time.'
+      puts 'Codemaker WINS!'
     end
   end
 
@@ -198,8 +199,6 @@ class Game
     show_title
     show_instruction
     choose_role
-    puts ''
-    p pattern
     start_guess
   end
 end
