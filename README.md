@@ -1,5 +1,9 @@
 # mastermind-game
 
+[Preview](https://replit.com/@reyolan/mastermind-game#.replit)
+
+## Description
+
 This program replicates the Mastermind game, instead of colors, numbers are used.
 
 There are two configurations that can be chosen.
